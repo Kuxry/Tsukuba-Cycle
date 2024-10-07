@@ -1,8 +1,7 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
 import pandas as pd
 import numpy as np
+from pytorch_tabnet.tab_model import TabNetRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -19,8 +18,6 @@ data = pd.read_excel('data2.xlsx')  # 替换为你的 Excel 文件路径
 
 # 处理缺失值，例如 '#DIV/0!'
 data.replace({'#DIV/0!': 0}, inplace=True)
-
-# 替换可能存在的NaN值以及无穷大值
 data.replace([np.inf, -np.inf], np.nan, inplace=True)
 data.dropna(inplace=True)
 
@@ -31,7 +28,6 @@ data['利用ステーション'] = label_encoder_station.fit_transform(data['利
 label_encoder_type = LabelEncoder()
 data['立地タイプ'] = label_encoder_type.fit_transform(data['立地タイプ'])
 
-# 对 曜日 (Day of the week) 进行类别编码
 label_encoder_day_type = LabelEncoder()
 data['曜日'] = label_encoder_day_type.fit_transform(data['曜日'])
 
@@ -49,95 +45,43 @@ joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
 
 # 定义特征和目标
 X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', '人口_総数_300m以内', '男性割合', '15_64人口割合',
-          '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合']]
-y = data['利用回数']  # 目标变量
+          '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合']].values
+y = data['利用回数'].values  # 目标变量
 
 # Step 3: 划分数据集
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 转换为 PyTorch 张量
-X_train = torch.tensor(X_train.values, dtype=torch.float32)
-X_test = torch.tensor(X_test.values, dtype=torch.float32)
-y_train = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
-y_test = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
-
-# Step 4: 定义神经网络模型
-class MLPRegressor(nn.Module):
-    def __init__(self, input_dim):
-        super(MLPRegressor, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 256)  # 增加神经元数量
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 64)
-        self.fc4 = nn.Linear(64, 32)
-        self.fc5 = nn.Linear(32, 1)
-        self.dropout = nn.Dropout(0.3)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.dropout(self.relu(self.fc1(x)))
-        x = self.dropout(self.relu(self.fc2(x)))
-        x = self.dropout(self.relu(self.fc3(x)))
-        x = self.dropout(self.relu(self.fc4(x)))
-        return self.fc5(x)
-
-
-# 初始化模型和优化器
-input_dim = X_train.shape[1]
-model = MLPRegressor(input_dim)
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)  # L2正则化
-
-
-scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)  # 每100个epoch，学习率降低为原来的0.1倍
+# Step 4: 定义TabNet回归模型
+model = TabNetRegressor()
 
 # Step 5: 训练模型
-epochs = 1000
-best_loss = float('inf')
-patience, trials = 10, 0
-
-for epoch in range(epochs):
-    model.train()
-    optimizer.zero_grad()
-    outputs = model(X_train)
-    loss = criterion(outputs, y_train)
-    loss.backward()
-    optimizer.step()
-    scheduler.step()  # 调整学习率
-
-
-    # Early Stopping
-    if loss.item() < best_loss:
-        best_loss = loss.item()
-        trials = 0
-    else:
-        trials += 1
-        if trials >= patience:
-            print(f"Early stopping on epoch {epoch + 1}")
-            break
-
-    if (epoch + 1) % 10 == 0:
-        print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
+model.fit(
+    X_train, y_train,
+    eval_set=[(X_test, y_test)],
+    eval_metric=['rmse'],
+    max_epochs=500,
+    patience=50,
+    batch_size=1024,
+    virtual_batch_size=128,
+    num_workers=0,
+    drop_last=False
+)
 
 # Step 6: 评估模型
-# 评估模型
-model.eval()
-with torch.no_grad():
-    y_pred = model(X_test)
-    y_pred = y_pred.numpy().flatten()
+y_pred = model.predict(X_test).flatten()
 
-# 确保 y_test 也是一维数组
+# 计算评估指标
 mse = mean_squared_error(y_test, y_pred)
 rmse = np.sqrt(mse)
 mae = mean_absolute_error(y_test, y_pred)
-mape = mean_absolute_percentage_error(y_test.numpy().flatten(), y_pred)
+mape = mean_absolute_percentage_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
-print(f"神经网络模型的均方误差 (MSE): {mse}")
-print(f"神经网络模型的根均方误差 (RMSE): {rmse}")
-print(f"神经网络模型的平均绝对误差 (MAE): {mae}")
-print(f"神经网络模型的平均绝对百分比误差 (MAPE): {mape:.2f}%")
-print(f"神经网络模型的 R² 分数为: {r2:.2f}")
+print(f"TabNet模型的均方误差 (MSE): {mse}")
+print(f"TabNet模型的根均方误差 (RMSE): {rmse}")
+print(f"TabNet模型的平均绝对误差 (MAE): {mae}")
+print(f"TabNet模型的平均绝对百分比误差 (MAPE): {mape:.2f}%")
+print(f"TabNet模型的 R² 分数为: {r2:.2f}")
 
 # 保存模型
-torch.save(model.state_dict(), 'best_mlp_model.pth')
-print("模型已保存为 best_mlp_model.pth")
+model.save_model('best_tabnet_model')
