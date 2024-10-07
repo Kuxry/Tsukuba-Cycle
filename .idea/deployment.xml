@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="iiserver33@130.158.170.45:22222 password (4)" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="iiserver33@130.158.170.45:22222 password (2)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/pycharm_project_139" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="iiserver33@130.158.170.45:22222 password (3)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/iiserver33/Workbench/likai/tkb/tmp/pycharm_project_139" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="iiserver33@130.158.170.45:22222 password (4)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/iiserver33/Workbench/likai/tkb/tmp/pycharm_project_139" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
