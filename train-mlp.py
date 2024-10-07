@@ -2,6 +2,7 @@ import torch
 import pandas as pd
 import numpy as np
 from pytorch_tabnet.tab_model import TabNetRegressor
+import xgboost as xgb
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
@@ -51,37 +52,56 @@ y = data['利用回数'].values  # 目标变量
 # Step 3: 划分数据集
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Step 4: 定义TabNet回归模型
-model = TabNetRegressor()
+# 调整目标变量维度
+y_train = y_train.reshape(-1, 1)
+y_test = y_test.reshape(-1, 1)
 
-# Step 5: 训练模型
-model.fit(
+# Step 4: 定义并训练TabNet回归模型
+tabnet_model = TabNetRegressor(n_d=16, n_a=16, n_steps=5, gamma=2, lambda_sparse=1e-3)
+
+tabnet_model.fit(
     X_train, y_train,
     eval_set=[(X_test, y_test)],
     eval_metric=['rmse'],
     max_epochs=500,
-    patience=50,
+    patience=300,
     batch_size=1024,
     virtual_batch_size=128,
     num_workers=0,
     drop_last=False
 )
 
-# Step 6: 评估模型
-y_pred = model.predict(X_test).flatten()
+# 获取TabNet的预测
+tabnet_preds = tabnet_model.predict(X_test).flatten()
 
-# 计算评估指标
-mse = mean_squared_error(y_test, y_pred)
+# Step 5: 定义并训练XGBoost回归模型
+xgb_model = xgb.XGBRegressor(
+    objective='reg:squarederror',
+    max_depth=6,
+    learning_rate=0.1,
+    n_estimators=500,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42
+)
+xgb_model.fit(X_train, y_train.ravel())
+xgb_preds = xgb_model.predict(X_test)
+
+# Step 6: 加权平均组合XGBoost和TabNet的预测
+xgb_weight = 0.7
+tabnet_weight = 0.3
+ensemble_preds = xgb_weight * xgb_preds + tabnet_weight * tabnet_preds
+
+# Step 7: 评估加权平均后的模型表现
+y_test_flat = y_test.flatten()
+mse = mean_squared_error(y_test_flat, ensemble_preds)
 rmse = np.sqrt(mse)
-mae = mean_absolute_error(y_test, y_pred)
-mape = mean_absolute_percentage_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+mae = mean_absolute_error(y_test_flat, ensemble_preds)
+mape = mean_absolute_percentage_error(y_test_flat, ensemble_preds)
+r2 = r2_score(y_test_flat, ensemble_preds)
 
-print(f"TabNet模型的均方误差 (MSE): {mse}")
-print(f"TabNet模型的根均方误差 (RMSE): {rmse}")
-print(f"TabNet模型的平均绝对误差 (MAE): {mae}")
-print(f"TabNet模型的平均绝对百分比误差 (MAPE): {mape:.2f}%")
-print(f"TabNet模型的 R² 分数为: {r2:.2f}")
-
-# 保存模型
-model.save_model('best_tabnet_model')
+print(f"集成模型的均方误差 (MSE): {mse}")
+print(f"集成模型的根均方误差 (RMSE): {rmse}")
+print(f"集成模型的平均绝对误差 (MAE): {mae}")
+print(f"集成模型的平均绝对百分比误差 (MAPE): {mape:.2f}%")
+print(f"集成模型的 R² 分数为: {r2:.2f}")
