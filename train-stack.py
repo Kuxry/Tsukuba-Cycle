@@ -50,7 +50,7 @@ y = data['利用回数']
 
 # XGBoost 贝叶斯优化搜索空间
 space = {
-    'n_estimators': hp.quniform('n_estimators', 100, 700, 50),
+    'n_estimators': hp.quniform('n_estimators', 100, 500, 50),
     'max_depth': hp.quniform('max_depth', 3, 15, 1),
     'learning_rate': hp.uniform('learning_rate', 0.01, 0.3),
     'subsample': hp.uniform('subsample', 0.6, 1),
