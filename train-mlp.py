@@ -65,27 +65,36 @@ y_test = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
 class MLPRegressor(nn.Module):
     def __init__(self, input_dim):
         super(MLPRegressor, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 32)
-        self.fc4 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(input_dim, 256)  # 增加神经元数量
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 32)
+        self.fc5 = nn.Linear(32, 1)
         self.dropout = nn.Dropout(0.3)
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.dropout(self.relu(self.fc1(x)))
         x = self.dropout(self.relu(self.fc2(x)))
-        x = self.relu(self.fc3(x))
-        return self.fc4(x)
+        x = self.dropout(self.relu(self.fc3(x)))
+        x = self.dropout(self.relu(self.fc4(x)))
+        return self.fc5(x)
+
 
 # 初始化模型和优化器
 input_dim = X_train.shape[1]
 model = MLPRegressor(input_dim)
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)  # L2正则化
+
+
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.1)  # 每100个epoch，学习率降低为原来的0.1倍
 
 # Step 5: 训练模型
-epochs = 100
+epochs = 1000
+best_loss = float('inf')
+patience, trials = 10, 0
+
 for epoch in range(epochs):
     model.train()
     optimizer.zero_grad()
@@ -93,6 +102,18 @@ for epoch in range(epochs):
     loss = criterion(outputs, y_train)
     loss.backward()
     optimizer.step()
+    scheduler.step()  # 调整学习率
+
+
+    # Early Stopping
+    if loss.item() < best_loss:
+        best_loss = loss.item()
+        trials = 0
+    else:
+        trials += 1
+        if trials >= patience:
+            print(f"Early stopping on epoch {epoch + 1}")
+            break
 
     if (epoch + 1) % 10 == 0:
         print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}')
