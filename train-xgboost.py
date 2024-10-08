@@ -17,33 +17,56 @@ def mean_absolute_percentage_error(y_true, y_pred):
 data = pd.read_excel('data2.xlsx')
 data.replace({'#DIV/0!': 0}, inplace=True)
 
-# 特征工程：交互特征
-data['人口_就业交互'] = data['人口_総数_300m以内'] * data['就業者_通学者割合']
-data['距离交互'] = data['バスとの距離'] * data['駅との距離']
+# 将 '利用開始日' 解析为日期格式
+data['利用開始日'] = pd.to_datetime(data['利用開始日'], format='%Y-%m-%d')
 
-# 特征工程：创建新的分箱特征并转换为整数类型
-data['バスとの距離_bins'] = pd.cut(data['バスとの距離'], bins=[0, 0.5, 1.5, 2.5], labels=[0, 1, 2]).astype(int)
+# 提取日期相关特征：年、月、日、星期
+data['年'] = data['利用開始日'].dt.year
+data['月'] = data['利用開始日'].dt.month
+data['日'] = data['利用開始日'].dt.day
+data['星期'] = data['利用開始日'].dt.weekday  # 星期一为0，星期日为6
 
-# 类别编码
-label_encoder = LabelEncoder()
-data['立地タイプ'] = label_encoder.fit_transform(data['立地タイプ'])
+# 创建周期性特征
+data['月_sin'] = np.sin(2 * np.pi * data['月'] / 12)
+data['月_cos'] = np.cos(2 * np.pi * data['月'] / 12)
+data['星期_sin'] = np.sin(2 * np.pi * data['星期'] / 7)
+data['星期_cos'] = np.cos(2 * np.pi * data['星期'] / 7)
+
+# 类别编码：将 'PortID' 作为类别特征处理
+label_encoder_portid = LabelEncoder()
+data['PortID'] = label_encoder_portid.fit_transform(data['PortID'])
+
+# 其他类别编码
+label_encoder_station = LabelEncoder()
+data['利用ステーション'] = label_encoder_station.fit_transform(data['利用ステーション'])
+label_encoder_type = LabelEncoder()
+data['立地タイプ'] = label_encoder_type.fit_transform(data['立地タイプ'])
 label_encoder_day_type = LabelEncoder()
 data['曜日'] = label_encoder_day_type.fit_transform(data['曜日'])
+
+# 特征工程：创建交互特征
+data['人口_就业交互'] = data['人口_総数_300m以内'] * data['就業者_通学者割合']
+data['距离交互'] = data['バスとの距離'] * data['駅との距離']
 
 # 数值特征标准化
 scaler = StandardScaler()
 numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合',
-                '就業者_通学者利用交通手段_自転車割合', '人口_就业交互', '距离交互']
+                '就業者_通学者利用交通手段_自転車割合', '月_sin', '月_cos', '星期_sin', '星期_cos',
+                '人口_就业交互', '距离交互']
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
 
 # 保存 scaler 和 LabelEncoder 对象
 joblib.dump(scaler, 'scaler.joblib')
-joblib.dump(label_encoder, 'label_encoder.joblib')
+joblib.dump(label_encoder_station, 'label_encoder_station.joblib')
+joblib.dump(label_encoder_type, 'label_encoder_type.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
+joblib.dump(label_encoder_portid, 'label_encoder_portid.joblib')
 
 # 定义特征和目标
-X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', '人口_総数_300m以内', '男性割合', '15_64人口割合',
-          '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合', '人口_就业交互', '距离交互', 'バスとの距離_bins']]
+X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', 'PortID', '利用ステーション',
+          '年', '月', '日', '月_sin', '月_cos', '星期_sin', '星期_cos',
+          '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合',
+          '人口_就业交互', '距离交互']]
 y = data['利用回数']
 
 # Step 2: 定义贝叶斯优化的搜索空间
@@ -88,17 +111,19 @@ for i in range(num_trials):
     best_model.fit(X_train, y_train)
     y_pred = best_model.predict(X_test)
     print(f"第 {i+1} 次模型已保存")
+
+
 # Step 5: 使用第三次的最佳参数进行微调
 third_best_params = best_params_list[2]  # 选择第三次的最佳参数
 third_best_params['learning_rate'] *= 0.1  # 将学习率降低一半
-third_best_params['n_estimators'] = 10000  # 增加迭代次数，进一步学习
+third_best_params['n_estimators'] = 50000  # 增加迭代次数，进一步学习
 
 print(f"使用第三次最佳参数 {third_best_params} 进行微调")
 tuned_model = xgb.XGBRegressor(
     objective='reg:squarederror',
     tree_method='hist',
     device='cuda',
-    early_stopping_rounds=20,
+    early_stopping_rounds=500,
     **third_best_params
 )
 evals = [(X_test, y_test)]  # 评估集
