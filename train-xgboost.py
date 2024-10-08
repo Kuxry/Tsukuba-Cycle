@@ -7,26 +7,43 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 
-# 自定义 MAPE 计算函数，避免除零问题
+# 自定义 MAPE 计算函数
 def mean_absolute_percentage_error(y_true, y_pred):
     y_true, y_pred = np.array(y_true), np.array(y_pred)
-    non_zero_indices = y_true != 0  # 只计算非零值
+    non_zero_indices = y_true != 0
     return np.mean(np.abs((y_true[non_zero_indices] - y_pred[non_zero_indices]) / y_true[non_zero_indices])) * 100
 
 # Step 1: 读取和处理数据
-data = pd.read_excel('data2.xlsx')  # 替换为你的 Excel 文件路径
+data = pd.read_excel('data2.xlsx')
 data.replace({'#DIV/0!': 0}, inplace=True)
+
+# 特征工程：交互特征
+data['人口_就业交互'] = data['人口_総数_300m以内'] * data['就業者_通学者割合']
+data['距离交互'] = data['バスとの距離'] * data['駅との距離']
+
+# 特征工程：创建新的分箱特征并转换为整数类型
+data['バスとの距離_bins'] = pd.cut(data['バスとの距離'], bins=[0, 0.5, 1.5, 2.5], labels=[0, 1, 2]).astype(int)
+
+# 类别编码
 label_encoder = LabelEncoder()
 data['立地タイプ'] = label_encoder.fit_transform(data['立地タイプ'])
 label_encoder_day_type = LabelEncoder()
 data['曜日'] = label_encoder_day_type.fit_transform(data['曜日'])
+
+# 数值特征标准化
 scaler = StandardScaler()
-numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合']
+numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合',
+                '就業者_通学者利用交通手段_自転車割合', '人口_就业交互', '距离交互']
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
+
+# 保存 scaler 和 LabelEncoder 对象
 joblib.dump(scaler, 'scaler.joblib')
 joblib.dump(label_encoder, 'label_encoder.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
-X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合']]
+
+# 定义特征和目标
+X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', '人口_総数_300m以内', '男性割合', '15_64人口割合',
+          '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合', '人口_就业交互', '距离交互', 'バスとの距離_bins']]
 y = data['利用回数']
 
 # Step 2: 定义贝叶斯优化的搜索空间
@@ -42,21 +59,17 @@ space = {
 # Step 3: 定义目标函数
 def objective(params):
     params['max_depth'] = int(params['max_depth'])
-    model = xgb.XGBRegressor(
-        objective='reg:squarederror',
-        tree_method='hist',
-        device='cuda',
-        **params
-    )
+    model = xgb.XGBRegressor(objective='reg:squarederror', tree_method='hist', device='cuda', **params)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     mse = mean_squared_error(y_test, y_pred)
     return {'loss': mse, 'status': STATUS_OK}
 
-# Step 4: 进行三次训练并记录第三次训练的参数
+# Step 4: 使用贝叶斯优化和微调
+num_trials = 3
 best_params_list = []
 
-for i in range(3):
+for i in range(num_trials):
     print(f"第 {i+1} 次模型训练")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=i)
     trials = Trials()
@@ -71,15 +84,10 @@ for i in range(3):
     }
     best_params_list.append(best_params)
 
-    best_model = xgb.XGBRegressor(
-        objective='reg:squarederror',
-        tree_method='hist',
-        device='cuda',
-        **best_params
-    )
+    best_model = xgb.XGBRegressor(objective='reg:squarederror', tree_method='hist', device='cuda', **best_params)
     best_model.fit(X_train, y_train)
+    y_pred = best_model.predict(X_test)
     print(f"第 {i+1} 次模型已保存")
-
 # Step 5: 使用第三次的最佳参数进行微调
 third_best_params = best_params_list[2]  # 选择第三次的最佳参数
 third_best_params['learning_rate'] *= 0.1  # 将学习率降低一半
