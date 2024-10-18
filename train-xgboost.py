@@ -14,7 +14,7 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs((y_true[non_zero_indices] - y_pred[non_zero_indices]) / y_true[non_zero_indices])) * 100
 
 # Step 1: 读取和处理数据
-data = pd.read_excel('data2.xlsx')
+data = pd.read_excel('data3.xlsx')
 data.replace({'#DIV/0!': 0}, inplace=True)
 
 # 将 '利用開始日' 解析为日期格式
@@ -37,8 +37,6 @@ label_encoder_portid = LabelEncoder()
 data['PortID'] = label_encoder_portid.fit_transform(data['PortID'])
 
 # 其他类别编码
-label_encoder_station = LabelEncoder()
-data['利用ステーション'] = label_encoder_station.fit_transform(data['利用ステーション'])
 label_encoder_type = LabelEncoder()
 data['立地タイプ'] = label_encoder_type.fit_transform(data['立地タイプ'])
 label_encoder_day_type = LabelEncoder()
@@ -48,28 +46,49 @@ data['曜日'] = label_encoder_day_type.fit_transform(data['曜日'])
 data['人口_就业交互'] = data['人口_総数_300m以内'] * data['就業者_通学者割合']
 data['距离交互'] = data['バスとの距離'] * data['駅との距離']
 
-# 数值特征标准化
+# 添加新的数值特征（假设这些列存在于 data2.xlsx 中）
+# 请根据实际情况调整列名和数据处理步骤
+# 例如，如果有缺失值，可以选择填充或删除
+# 此处假设所有新增变量都是数值型且无缺失值
+
+# Step 1.1: 添加并处理新增的数值特征
+new_numeric_cols = ['ポート数_300mBuffer', 'ポート数_500mBuffer', 'ポート数_1000mBuffer',
+                   '平均気温', '降水量の合計（mm）']
+# 确保这些列存在于数据中
+missing_cols = [col for col in new_numeric_cols if col not in data.columns]
+if missing_cols:
+    raise ValueError(f"以下新增的数值特征在数据中未找到: {missing_cols}")
+
+# 可以选择对新增的数值特征进行缺失值处理
+# 例如，使用中位数填充缺失值
+# data[new_numeric_cols] = data[new_numeric_cols].fillna(data[new_numeric_cols].median())
+
+# Step 2: 数值特征标准化
 scaler = StandardScaler()
+# 原有数值特征
 numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合',
                 '就業者_通学者利用交通手段_自転車割合', '月_sin', '月_cos', '星期_sin', '星期_cos',
                 '人口_就业交互', '距离交互']
+# 添加新增的数值特征
+numeric_cols.extend(new_numeric_cols)
+
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
 
 # 保存 scaler 和 LabelEncoder 对象
 joblib.dump(scaler, 'scaler.joblib')
-joblib.dump(label_encoder_station, 'label_encoder_station.joblib')
+# 保存其他的 LabelEncoder 对象
 joblib.dump(label_encoder_type, 'label_encoder_type.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
 joblib.dump(label_encoder_portid, 'label_encoder_portid.joblib')
 
 # 定义特征和目标
-X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', 'PortID', '利用ステーション',
+X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', 'PortID',
           '年', '月', '日', '月_sin', '月_cos', '星期_sin', '星期_cos',
           '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合', '就業者_通学者利用交通手段_自転車割合',
-          '人口_就业交互', '距离交互']]
+          '人口_就业交互', '距离交互'] + new_numeric_cols]
 y = data['利用回数']
 
-# Step 2: 定义贝叶斯优化的搜索空间
+# Step 3: 定义贝叶斯优化的搜索空间
 space = {
     'n_estimators': hp.choice('n_estimators', [100, 200, 300, 400]),
     'max_depth': hp.quniform('max_depth', 3, 15, 1),
@@ -79,7 +98,7 @@ space = {
     'gamma': hp.uniform('gamma', 0, 0.5)
 }
 
-# Step 3: 定义目标函数
+# Step 4: 定义目标函数
 def objective(params):
     params['max_depth'] = int(params['max_depth'])
     model = xgb.XGBRegressor(objective='reg:squarederror', tree_method='hist', device='cuda', **params)
@@ -88,7 +107,7 @@ def objective(params):
     mse = mean_squared_error(y_test, y_pred)
     return {'loss': mse, 'status': STATUS_OK}
 
-# Step 4: 使用贝叶斯优化和微调
+# Step 5: 使用贝叶斯优化和微调
 num_trials = 3
 best_params_list = []
 
@@ -111,9 +130,10 @@ for i in range(num_trials):
     best_model.fit(X_train, y_train)
     y_pred = best_model.predict(X_test)
     print(f"第 {i+1} 次模型已保存")
+    # 可以选择保存每次训练的模型，例如:
+    # joblib.dump(best_model, f'best_model_trial_{i+1}.joblib')
 
-
-# Step 5: 使用第三次的最佳参数进行微调
+# Step 6: 使用第三次的最佳参数进行微调
 third_best_params = best_params_list[2]  # 选择第三次的最佳参数
 third_best_params['learning_rate'] *= 0.1  # 将学习率降低一半
 third_best_params['n_estimators'] = 50000  # 增加迭代次数，进一步学习
