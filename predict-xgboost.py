@@ -12,10 +12,9 @@ plt.rcParams['font.family'] = 'MS Gothic'
 # Step 1: 加载保存好的模型和预处理对象
 loaded_model = joblib.load('final_tuned_xgb_model_third_trial.joblib')  # 加载最终微调后的模型
 scaler = joblib.load('scaler.joblib')  # 加载保存的 scaler
-label_encoder_station = joblib.load('label_encoder_station.joblib')
 label_encoder_type = joblib.load('label_encoder_type.joblib')
 label_encoder_day_type = joblib.load('label_encoder_day_type.joblib')
-label_encoder_portid = joblib.load('label_encoder_portid.joblib')
+
 
 # Step 2: 创建预测数据集
 # 示例数据创建（根据您的需求进行修改）
@@ -29,8 +28,6 @@ new_data = pd.DataFrame({
     '就業者_通学者利用交通手段_自転車割合': np.random.uniform(0, 0.3, 20),
     '立地タイプ': np.random.choice(['駅', '商業施設', '公園'], 20),
     '曜日': np.random.choice(['月曜日', '火曜日', '水曜日'], 20),
-    'PortID': np.random.randint(1, 10, 20),  # 假设PortID在1到10之间
-    '利用ステーション': np.random.choice(['A', 'B', 'C'], 20),  # 假设有三个站点
     '年': np.random.choice([2021, 2022], 20),
     '月': np.random.choice(list(range(1, 13)), 20),
     '日': np.random.choice(list(range(1, 29)), 20)
@@ -45,16 +42,16 @@ def safe_transform(encoder, values, default_class):
 
 
 # 为未知类别指定默认值
-default_station = label_encoder_station.classes_[0]
+
 default_type = label_encoder_type.classes_[0]
 default_day_type = label_encoder_day_type.classes_[0]
-default_portid = label_encoder_portid.classes_[0]
+
 
 # 转换类别
-new_data['利用ステーション'] = safe_transform(label_encoder_station, new_data['利用ステーション'], default_station)
+
 new_data['立地タイプ'] = safe_transform(label_encoder_type, new_data['立地タイプ'], default_type)
 new_data['曜日'] = safe_transform(label_encoder_day_type, new_data['曜日'], default_day_type)
-new_data['PortID'] = safe_transform(label_encoder_portid, new_data['PortID'], default_portid)
+
 
 # 日期周期性特征
 new_data['月_sin'] = np.sin(2 * np.pi * new_data['月'] / 12)
@@ -77,7 +74,7 @@ new_data[numeric_cols] = scaler.transform(new_data[numeric_cols])
 # Step 4: 使用模型进行预测
 # 确保特征顺序与模型训练时一致
 input_data = new_data[[
-    'バスとの距離', '駅との距離', '立地タイプ', '曜日', 'PortID', '利用ステーション',
+    'バスとの距離', '駅との距離', '立地タイプ', '曜日',
     '年', '月', '日', '月_sin', '月_cos', '星期_sin', '星期_cos',
     '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合',
     '就業者_通学者利用交通手段_自転車割合', '人口_就业交互', '距离交互'
