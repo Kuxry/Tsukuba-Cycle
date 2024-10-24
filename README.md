@@ -58,5 +58,7 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 The use of AI technologies, such as XGBoost and Transformer-based models, plays a central role in solving real-world urban mobility issues. By predicting user demand and analyzing potential vehicle redistribution strategies, we aim to create an efficient and accessible share-cycle system in Tsukuba.
 
+To support this initiative, automated data scraping is used to collect real-time information from relevant sources such as share-cycle usage data, traffic conditions, and user behaviors. By employing a custom test.py file, we can automate the data collection process from official websites and APIs, ensuring that the most up-to-date information is always available for AI model training and evaluation. This method allows for continuous monitoring and adjustment of AI predictions based on real-time trends, leading to more responsive and adaptive urban infrastructure planning.
+
 This project demonstrates how data-driven solutions can lead to practical improvements in public transportation and urban infrastructure, ensuring that share-cycle stations are strategically placed to optimize service and meet user needs.
 
