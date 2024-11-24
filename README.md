@@ -56,7 +56,7 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 ## AI Technology Application and Data Scraping
 
-The integration of AI technologies like **XGBoost** and **Transformer-based models** plays a central role in addressing complex urban mobility challenges. Through advanced data analysis, these models can predict user demand patterns, optimize vehicle redistribution strategies, and ensure that share-cycle stations are strategically positioned throughout Tsukuba. This data-driven approach not only enhances the efficiency of the share-cycle system but also significantly improves user accessibility and satisfaction.
+The integration of AI technologies like **XGBoost**, **Catboost** and **Transformer-based models** plays a central role in addressing complex urban mobility challenges. Through advanced data analysis, these models can predict user demand patterns, optimize vehicle redistribution strategies, and ensure that share-cycle stations are strategically positioned throughout Tsukuba. This data-driven approach not only enhances the efficiency of the share-cycle system but also significantly improves user accessibility and satisfaction.
 
 To support this initiative, automated data scraping is used to collect real-time information from relevant sources such as share-cycle usage data, traffic conditions, and user behaviors. By employing a custom `test.py` file, we can automate the data collection process from official websites and APIs, ensuring that the most up-to-date information is always available for AI model training and evaluation. This method allows for continuous monitoring and adjustment of AI predictions based on real-time trends, leading to more responsive and adaptive urban infrastructure planning.
 
