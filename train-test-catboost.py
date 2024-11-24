@@ -1,15 +1,17 @@
 import pandas as pd
-import xgboost as xgb
-import optuna
+import numpy as np
+from catboost import CatBoostRegressor, Pool
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
+
 # 加载数据
 train_data = pd.read_excel('train.xlsx')
 test_data = pd.read_excel('test.xlsx')
+
 # 删除时间列
-train_data = train_data.drop(columns=['利用開始日','年度','月','曜日','PortID'], errors='ignore')
-test_data = test_data.drop(columns=['利用開始日','年度','月','曜日','PortID'], errors='ignore')
+train_data = train_data.drop(columns=['利用開始日', '年度', '月', '曜日', 'PortID'], errors='ignore')
+test_data = test_data.drop(columns=['利用開始日', '年度', '月', '曜日', 'PortID'], errors='ignore')
 
 # 1. 计算每个站点的历史平均利用次数
 station_mean_count = train_data.groupby('利用ステーション')['count'].mean()
@@ -42,76 +44,30 @@ if target_column not in test_data:
 X_test = test_data.drop(columns=[target_column])  # 特征
 y_test = test_data[target_column]  # 真实值
 
-# 独热编码和对齐测试集列
-X = pd.get_dummies(X)
-X_test = pd.get_dummies(X_test)
-X_test = X_test.reindex(columns=X.columns, fill_value=0)
-
 # 数据拆分
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 定义 Optuna 目标函数
-def objective(trial):
-    params = {
-        'objective': 'reg:squarederror',
-        'eval_metric': 'rmse',
-        'max_depth': trial.suggest_int('max_depth', 3, 10),
-        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
-        'n_estimators': trial.suggest_int('n_estimators', 100, 1000),
-        'subsample': trial.suggest_float('subsample', 0.5, 1.0),
-        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
-        'reg_alpha': trial.suggest_float('reg_alpha', 0.0, 10.0),
-        'reg_lambda': trial.suggest_float('reg_lambda', 0.0, 10.0),
-    }
-
-    # 创建 DMatrix
-    dtrain = xgb.DMatrix(X_train, label=y_train)
-    dval = xgb.DMatrix(X_val, label=y_val)
-
-    # 训练模型
-    model = xgb.train(
-        params,
-        dtrain,
-        num_boost_round=params['n_estimators'],
-        evals=[(dval, 'eval')],
-        early_stopping_rounds=10,
-        verbose_eval=False
-    )
-
-    # 验证集预测
-    y_val_pred = model.predict(dval)
-
-    # 返回 RMSE 作为目标优化值
-    rmse = mean_squared_error(y_val, y_val_pred, squared=False)
-    return rmse
-
-# 启动 Optuna 超参数搜索
-study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=50)
-
-# 输出最佳参数和最优得分
-print("Best Parameters:", study.best_params)
-print("Best RMSE:", study.best_value)
-
-# 使用最佳参数重新训练模型
-best_params = study.best_params
-best_params['objective'] = 'reg:squarederror'
-best_params['eval_metric'] = 'rmse'
-
-dtrain = xgb.DMatrix(X_train, label=y_train)
-dval = xgb.DMatrix(X_val, label=y_val)
-dtest = xgb.DMatrix(X_test)
-
-final_model = xgb.train(
-    best_params,
-    dtrain,
-    num_boost_round=best_params['n_estimators'],
-    evals=[(dval, 'eval')],
-    early_stopping_rounds=10
+# 使用 CatBoostRegressor
+model = CatBoostRegressor(
+    iterations=1000,
+    learning_rate=0.1,
+    depth=6,
+    loss_function='RMSE',
+    eval_metric='RMSE',
+    random_seed=42,
+    early_stopping_rounds=10,
+    verbose=100
 )
 
+# 训练模型
+train_pool = Pool(X_train, y_train)
+val_pool = Pool(X_val, y_val)
+test_pool = Pool(X_test)
+
+model.fit(train_pool, eval_set=val_pool)
+
 # 测试集预测
-y_test_pred = final_model.predict(dtest)
+y_test_pred = model.predict(test_pool)
 
 # 计算测试集指标
 mse_test = mean_squared_error(y_test, y_test_pred)
@@ -132,6 +88,7 @@ comparison = pd.DataFrame({
 print("Test Set Comparison (Real vs Predicted):")
 print(comparison.head(10))  # 打印前10行对比
 
+# 绘制实际值 vs 预测值
 plt.figure()
 plt.scatter(y_test, y_test_pred, alpha=0.5)
 plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
@@ -139,7 +96,6 @@ plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
 plt.title('Actual vs Predicted')
 plt.show()
-
 
 # 分布差距分析
 plt.figure(figsize=(12, 6))
@@ -153,6 +109,7 @@ plt.grid(axis='y')
 plt.tight_layout()
 plt.savefig('distribution_real_vs_predicted.png')
 plt.show()
+
 # 保存对比结果
 comparison.to_excel('test_real_vs_predicted.xlsx', index=False)
 print("测试集真实值与预测值对比已保存至 test_real_vs_predicted.xlsx")
