@@ -16,8 +16,8 @@ train_data = pd.read_excel('train.xlsx')
 test_data = pd.read_excel('test.xlsx')
 
 # 删除时间列
-train_data = train_data.drop(columns=['利用開始日', '年度','月', 'PortID','ポート数_300mBuffer','ポート数_500mBuffer','ポート数_1000mBuffer','バスとの距離','駅との距離','人口_総数_300m以内'], errors='ignore')
-test_data = test_data.drop(columns=['利用開始日', '年度','月','PortID','ポート数_300mBuffer','ポート数_500mBuffer','ポート数_1000mBuffer','バスとの距離','駅との距離','人口_総数_300m以内'], errors='ignore')
+train_data = train_data.drop(columns=['利用開始日', '年度'], errors='ignore')
+test_data = test_data.drop(columns=['利用開始日', '年度'], errors='ignore')
 
 # 删除原始的站点列
 train_data = train_data.drop(columns=['利用ステーション'])
