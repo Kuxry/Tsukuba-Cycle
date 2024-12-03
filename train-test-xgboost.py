@@ -1,7 +1,7 @@
 import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import KFold
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -38,9 +38,6 @@ X = train_data.drop(columns=[target_column])
 y = train_data[target_column]
 
 # 确保测试集有真实值
-if target_column not in test_data:
-    raise ValueError(f"测试集中必须包含真实值列 '{target_column}' 以进行对比分析")
-
 X_test = test_data.drop(columns=[target_column])
 y_test = test_data[target_column]
 
@@ -62,15 +59,13 @@ params = {
 }
 
 # 定义样本权重
-# 给高值样本更高的权重，权重公式可以根据实际数据调整，这里示例为线性增长
 high_value_threshold = y.quantile(0.90)  # 定义高值样本的阈值
 weights = np.where(y > high_value_threshold, 1 + (y / high_value_threshold), 1)
 
-#weights = np.where(y > high_value_threshold, 3, 1)  # 高值样本权重为 2，其余为 1
-
 # 5折交叉验证
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
-cv_rmse_scores = []
+cv_train_r2_scores = []
+cv_val_r2_scores = []
 cv_models = []
 
 for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
@@ -99,19 +94,24 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
     # 保存每折的模型
     cv_models.append(model)
 
+    # 训练集预测
+    y_train_pred = model.predict(dtrain)
+    train_r2 = r2_score(y_train, y_train_pred)
+    cv_train_r2_scores.append(train_r2)
+
     # 验证集预测
     y_val_pred = model.predict(dval)
+    val_r2 = r2_score(y_val, y_val_pred)
+    cv_val_r2_scores.append(val_r2)
 
-    # 计算 RMSE
-    rmse = mean_squared_error(y_val, y_val_pred, squared=False)
-    cv_rmse_scores.append(rmse)
-    print(f"Fold {fold + 1} RMSE: {rmse}")
+    print(f"Fold {fold + 1} Train R²: {train_r2:.4f}")
+    print(f"Fold {fold + 1} Validation R²: {val_r2:.4f}")
 
 # 打印交叉验证结果
-mean_rmse = np.mean(cv_rmse_scores)
-std_rmse = np.std(cv_rmse_scores)
-print(f"Cross-Validation Mean RMSE: {mean_rmse}")
-print(f"Cross-Validation Std RMSE: {std_rmse}")
+mean_train_r2 = np.mean(cv_train_r2_scores)
+mean_val_r2 = np.mean(cv_val_r2_scores)
+print(f"Cross-Validation Mean Train R²: {mean_train_r2:.4f}")
+print(f"Cross-Validation Mean Validation R²: {mean_val_r2:.4f}")
 
 # 使用最后一折模型对测试集进行预测
 dtest = xgb.DMatrix(X_test)
@@ -120,13 +120,11 @@ y_test_pred = cv_models[-1].predict(dtest)
 # 计算测试集指标
 mse_test = mean_squared_error(y_test, y_test_pred)
 rmse_test = mse_test ** 0.5
-mae_test = mean_absolute_error(y_test, y_test_pred)
 r2_test = r2_score(y_test, y_test_pred)
 
 print(f"Test MSE: {mse_test}")
 print(f"Test RMSE: {rmse_test}")
-print(f"Test MAE: {mae_test}")
-print(f"Test R²: {r2_test}")
+print(f"Test R²: {r2_test:.4f}")
 
 # 打印真实值与预测值对比
 comparison = pd.DataFrame({
@@ -134,13 +132,4 @@ comparison = pd.DataFrame({
     'Predicted': y_test_pred
 })
 print("Test Set Comparison (Real vs Predicted):")
-print(comparison.head(10))  # 打印前10行对比
-
-# 绘制实际值和预测值的对比图
-plt.figure()
-plt.scatter(y_test, y_test_pred, alpha=0.5)
-plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
-plt.xlabel('Actual Values')
-plt.ylabel('Predicted Values')
-plt.title('Actual vs Predicted')
-plt.show()
+print(comparison.head(10))
