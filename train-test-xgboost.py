@@ -10,8 +10,14 @@ train_data = pd.read_excel('train.xlsx')
 test_data = pd.read_excel('test.xlsx')
 
 # 删除时间列
-train_data = train_data.drop(columns=['利用開始日', '年度', '月', 'PortID'], errors='ignore')
-test_data = test_data.drop(columns=['利用開始日', '年度', '月', 'PortID'], errors='ignore')
+train_data = train_data.drop(columns=['利用開始日', '月', 'PortID'], errors='ignore')
+test_data = test_data.drop(columns=['利用開始日', '月', 'PortID'], errors='ignore')
+
+# 去掉年度为 2021 的数据
+train_data = train_data[train_data['年度'] != 2021]
+
+train_data = train_data.drop(columns=['年度'], errors='ignore')
+test_data = test_data.drop(columns=['年度'], errors='ignore')
 
 # 计算每个站点的历史平均利用次数
 station_mean_count = train_data.groupby('利用ステーション')['count'].mean()
