@@ -64,7 +64,9 @@ params = {
 # 定义样本权重
 # 给高值样本更高的权重，权重公式可以根据实际数据调整，这里示例为线性增长
 high_value_threshold = y.quantile(0.90)  # 定义高值样本的阈值
-weights = np.where(y > high_value_threshold, 3, 1)  # 高值样本权重为 2，其余为 1
+weights = np.where(y > high_value_threshold, 1 + (y / high_value_threshold), 1)
+
+#weights = np.where(y > high_value_threshold, 3, 1)  # 高值样本权重为 2，其余为 1
 
 # 5折交叉验证
 kf = KFold(n_splits=5, shuffle=True, random_state=42)
