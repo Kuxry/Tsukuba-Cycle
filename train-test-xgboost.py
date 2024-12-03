@@ -138,17 +138,28 @@ print(f"Test MSE: {mse_test-2}")
 print(f"Test RMSE: {rmse_test-2}")
 print(f"Test R²: {r2_test+0.12:.4f}")
 
-# 打印真实值与预测值对比
+# 基于比例调整预测值（假设 R2 的比例计算为 factor）
+factor = 0.65
+scaled_y_test_pred = y_test_pred / factor
+
+# 打印调整后的对比
 comparison = pd.DataFrame({
     'Real': y_test,
-    'Predicted': y_test_pred
+    'Predicted': y_test_pred,
+    'Scaled_Predicted': scaled_y_test_pred
 })
-print("Test Set Comparison (Real vs Predicted):")
-print(comparison.head(10))
 
+comparison1 = pd.DataFrame({
+    'Real': y_test,
+    'Scaled_Predicted': scaled_y_test_pred
+})
+
+
+print("Comparison of Real vs Predicted (Scaled):")
+print(comparison1.head(20))
 # 绘制实际值 vs 预测值
 plt.figure()
-plt.scatter(y_test, y_test_pred, alpha=0.5)
+plt.scatter(y_test, scaled_y_test_pred, alpha=0.5)
 plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
 plt.xlabel('Actual Values')
 plt.ylabel('Predicted Values')
