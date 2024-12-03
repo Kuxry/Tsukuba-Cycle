@@ -12,10 +12,20 @@ font_path = "MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 
+# 定义曜日映射函数
+day_mapping = {
+    '日曜日': 7, '月曜日': 1, '火曜日': 2, '水曜日': 3,
+    '木曜日': 4, '金曜日': 5, '土曜日': 6
+}
+
 # Step 1: 加载数据
 file_path = 'train.xlsx'  # 替换为你的文件路径
 data = pd.ExcelFile(file_path)
 df = data.parse('Sheet1')  # 假设数据在第一个工作表中
+
+# 将曜日映射为数值
+if '曜日' in df.columns:
+    df['曜日'] = df['曜日'].map(day_mapping)
 
 # Step 2: 提取数值型数据并删除目标变量
 numeric_data = df.select_dtypes(include=['number']).drop(columns=['count'], errors='ignore')
