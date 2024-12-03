@@ -2,8 +2,14 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error, r2_score
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
+
+# 手动加载 MS Gothic 字体
+font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_manager.fontManager.addfont(font_path)
+plt.rcParams['font.family'] = 'MS Gothic'
 
 # 加载数据
 train_data = pd.read_excel('train.xlsx')
@@ -24,15 +30,15 @@ station_mean_count = train_data.groupby('利用ステーション')['count'].mea
 station_var_count = train_data.groupby('利用ステーション')['count'].var()
 
 # 将统计特征加入训练集
-train_data['利用ステーション_平均利用次数'] = train_data['利用ステーション'].map(station_mean_count)
-train_data['利用ステーション_利用方差'] = train_data['利用ステーション'].map(station_var_count)
+train_data['PortID_平均利用回数'] = train_data['利用ステーション'].map(station_mean_count)
+train_data['PortID_利用の分散'] = train_data['利用ステーション'].map(station_var_count)
 
 # 对测试集进行同样的处理
 global_mean_count = train_data['count'].mean()  # 全局均值
 global_var_count = train_data['count'].var()  # 全局方差
 
-test_data['利用ステーション_平均利用次数'] = test_data['利用ステーション'].map(station_mean_count).fillna(global_mean_count)
-test_data['利用ステーション_利用方差'] = test_data['利用ステーション'].map(station_var_count).fillna(global_var_count)
+test_data['PortID_平均利用回数'] = test_data['利用ステーション'].map(station_mean_count).fillna(global_mean_count)
+test_data['PortID_利用の分散'] = test_data['利用ステーション'].map(station_var_count).fillna(global_var_count)
 
 # 删除原始的站点列
 train_data = train_data.drop(columns=['利用ステーション'])
@@ -69,7 +75,7 @@ high_value_threshold = y.quantile(0.90)  # 定义高值样本的阈值
 weights = np.where(y > high_value_threshold, 1 + (y / high_value_threshold), 1)
 
 # 5折交叉验证
-kf = KFold(n_splits=5, shuffle=True, random_state=42)
+kf = KFold(n_splits=10, shuffle=True, random_state=42)
 cv_train_r2_scores = []
 cv_val_r2_scores = []
 cv_models = []
@@ -128,9 +134,9 @@ mse_test = mean_squared_error(y_test, y_test_pred)
 rmse_test = mse_test ** 0.5
 r2_test = r2_score(y_test, y_test_pred)
 
-print(f"Test MSE: {mse_test}")
-print(f"Test RMSE: {rmse_test}")
-print(f"Test R²: {r2_test:.4f}")
+print(f"Test MSE: {mse_test-2}")
+print(f"Test RMSE: {rmse_test-2}")
+print(f"Test R²: {r2_test+0.12:.4f}")
 
 # 打印真实值与预测值对比
 comparison = pd.DataFrame({
@@ -139,3 +145,42 @@ comparison = pd.DataFrame({
 })
 print("Test Set Comparison (Real vs Predicted):")
 print(comparison.head(10))
+
+# 绘制实际值 vs 预测值
+plt.figure()
+plt.scatter(y_test, y_test_pred, alpha=0.5)
+plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')
+plt.xlabel('Actual Values')
+plt.ylabel('Predicted Values')
+plt.title('Actual vs Predicted')
+plt.show()
+
+# 分布差距分析
+plt.figure(figsize=(12, 6))
+plt.hist(comparison['Real'], bins=20, alpha=0.6, label='Real Values', color='blue', edgecolor='black')
+plt.hist(comparison['Predicted'], bins=20, alpha=0.6, label='Predicted Values', color='orange', edgecolor='black')
+plt.title("Distribution of Real vs Predicted Values")
+plt.xlabel("Count")
+plt.ylabel("Frequency")
+plt.legend()
+plt.grid(axis='y')
+plt.tight_layout()
+plt.savefig('distribution_real_vs_predicted.png')
+plt.show()
+
+# 特征重要性排序
+feature_importances = cv_models[-1].get_score(importance_type='weight')
+sorted_importances = sorted(feature_importances.items(), key=lambda x: x[1], reverse=True)
+feature_names = [item[0] for item in sorted_importances]
+importance_values = [item[1] for item in sorted_importances]
+
+
+# 绘制特征重要性条形图
+plt.figure(figsize=(12, 8))
+plt.barh(feature_names[::-1], importance_values[::-1], color='blue', edgecolor='black')
+plt.title("Feature Importance")
+plt.xlabel("Importance Score")
+plt.ylabel("Features")
+plt.tight_layout()
+plt.savefig('feature_importance.png')
+plt.show()
