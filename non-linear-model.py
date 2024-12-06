@@ -3,9 +3,13 @@ import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
-# 读取 CSV 文件
+# 读取 CSV 文件 (损失和可用自行车数据)
 file_path = 'Minlost.csv'  # 请确保文件路径正确
 df = pd.read_csv(file_path)
+
+# 读取容量数据
+capacity_file_path = 'ポートの容量.csv'  # 容量文件路径
+port_capacity_df = pd.read_csv(capacity_file_path)
 
 # 按站点 (PortID) 分组
 grouped = df.groupby("PortID")
@@ -75,35 +79,39 @@ fit_results_df.reset_index(inplace=True)
 r2_df = pd.DataFrame(r2_values, columns=["PortID", "R2"])
 final_results_df = pd.merge(fit_results_df, r2_df, on="PortID")
 
-# 添加计算最优空车数量的函数
-# 添加计算最优空车数量的函数
-def calculate_optimal_bikes(row):
-    x_min = 0  # 假设 Available bikes 的最小值
-    x_max = 83  # 假设 Available bikes 的最大值（需要根据实际数据调整）
+# 将容量数据合并到最终结果
+final_results_df = pd.merge(final_results_df, port_capacity_df, on="PortID", how="left")
 
-    # 计算顶点
-    x_vertex = -row["b"] / (2 * row["a"])
+# 添加计算最优空车数量的函数（考虑最大容量）
+def calculate_optimal_bikes_with_capacity(row):
+    x_min = 0  # 最小空车数量
+    x_max = row["容量"]  # 从容量文件中读取的最大容量
+    x_vertex = -row["b"] / (2 * row["a"])  # 顶点位置
 
-    # 如果开口向上，顶点是最小值
+    # 如果开口向上
     if row["a"] > 0:
-        return x_vertex
-
-    # 如果开口向下，比较区间边界和顶点值的最小值
+        if x_min <= x_vertex <= x_max:
+            return x_vertex  # 顶点在有效区间内
+        else:
+            return x_min if abs(x_min - x_vertex) < abs(x_max - x_vertex) else x_max  # 返回最接近的边界值
+    # 如果开口向下
     else:
+        # 计算区间边界和顶点值
         f_x_min = row["a"] * x_min**2 + row["b"] * x_min + row["c"]
         f_x_max = row["a"] * x_max**2 + row["b"] * x_max + row["c"]
         f_x_vertex = row["a"] * x_vertex**2 + row["b"] * x_vertex + row["c"]
 
-        # 检查顶点是否在区间内
+        # 检查顶点是否在区间内并比较最小值
         if x_min <= x_vertex <= x_max:
             return x_vertex if f_x_vertex <= min(f_x_min, f_x_max) else (x_min if f_x_min < f_x_max else x_max)
         else:
             return x_min if f_x_min < f_x_max else x_max
 
 # 计算最优空车数量并添加到结果 DataFrame
-final_results_df["Optimal Bikes"] = final_results_df.apply(calculate_optimal_bikes, axis=1)
-# 输出最终表格
+final_results_df["Optimal Bikes"] = final_results_df.apply(calculate_optimal_bikes_with_capacity, axis=1)
+
+# 输出最终结果表格
 print(final_results_df)
 
 # 保存为 CSV 文件（可选）
-final_results_df.to_csv("Final_Results_With_Optimal_Bikes.csv", index=False)
+final_results_df.to_csv("Final_Results_With_Optimal_Bikes_Capacity.csv", index=False)
