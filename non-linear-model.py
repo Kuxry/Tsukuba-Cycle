@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+from scipy.optimize import minimize
 
 # 读取 CSV 文件 (损失和可用自行车数据)
 file_path = 'Minlost.csv'  # 请确保文件路径正确
@@ -82,36 +83,47 @@ final_results_df = pd.merge(fit_results_df, r2_df, on="PortID")
 # 将容量数据合并到最终结果
 final_results_df = pd.merge(final_results_df, port_capacity_df, on="PortID", how="left")
 
-# 添加计算最优空车数量的函数（考虑最大容量）
-def calculate_optimal_bikes_with_capacity(row):
-    x_min = 0  # 最小空车数量
-    x_max = row["容量"]  # 从容量文件中读取的最大容量
-    x_vertex = -row["b"] / (2 * row["a"])  # 顶点位置
+# 定义全局优化函数，满足总车数限制
+def global_objective(bike_distribution):
+    total_loss = 0
+    for i, bikes in enumerate(bike_distribution):
+        row = final_results_df.iloc[i]
+        a, b, c = row["a"], row["b"], row["c"]
+        total_loss += a * bikes**2 + b * bikes + c
+    return total_loss
 
-    # 如果开口向上
-    if row["a"] > 0:
-        if x_min <= x_vertex <= x_max:
-            return x_vertex  # 顶点在有效区间内
-        else:
-            return x_min if abs(x_min - x_vertex) < abs(x_max - x_vertex) else x_max  # 返回最接近的边界值
-    # 如果开口向下
-    else:
-        # 计算区间边界和顶点值
-        f_x_min = row["a"] * x_min**2 + row["b"] * x_min + row["c"]
-        f_x_max = row["a"] * x_max**2 + row["b"] * x_max + row["c"]
-        f_x_vertex = row["a"] * x_vertex**2 + row["b"] * x_vertex + row["c"]
+# 添加约束：每个站点分配的车数不能超过容量，且总车数为 83
+constraints = [
+    {"type": "eq", "fun": lambda x: np.sum(x) - 83},  # 总车数必须为 83
+]
 
-        # 检查顶点是否在区间内并比较最小值
-        if x_min <= x_vertex <= x_max:
-            return x_vertex if f_x_vertex <= min(f_x_min, f_x_max) else (x_min if f_x_min < f_x_max else x_max)
-        else:
-            return x_min if f_x_min < f_x_max else x_max
+# 定义变量边界：每个站点车数范围 [0, 容量]
+bounds = [(0, row["容量"]) for _, row in final_results_df.iterrows()]
 
-# 计算最优空车数量并添加到结果 DataFrame
-final_results_df["Optimal Bikes"] = final_results_df.apply(calculate_optimal_bikes_with_capacity, axis=1)
+# 初始猜测值：平分总车数
+initial_guess = [83 / len(final_results_df)] * len(final_results_df)
+
+# 执行优化
+result = minimize(
+    global_objective,
+    initial_guess,
+    bounds=bounds,
+    constraints=constraints,
+    method="SLSQP",
+)
+
+# 将优化结果添加到 DataFrame
+final_results_df["Optimized Bikes"] = result.x
+
+# 计算当前机会损失值
+# 计算当前机会损失值，并确保不为负
+final_results_df["Current Opportunity Loss"] = final_results_df.apply(
+    lambda row: max(0, row["a"] * row["Optimized Bikes"]**2 + row["b"] * row["Optimized Bikes"] + row["c"]),
+    axis=1,
+)
 
 # 输出最终结果表格
 print(final_results_df)
 
 # 保存为 CSV 文件（可选）
-final_results_df.to_csv("Final_Results_With_Optimal_Bikes_Capacity.csv", index=False)
+final_results_df.to_csv("Final_Results_With_Current_Opportunity_Loss.csv", index=False)
