@@ -97,7 +97,7 @@ constraints = [
     {"type": "eq", "fun": lambda x: np.sum(x) - 83},  # 总车数必须为 83
 ]
 
-# 定义变量边界：每个站点车数范围 [0, 容量]
+# 定义变量边界：每个站点车数范围 [1, 容量] （假设下界为1）
 bounds = [(1, row["容量"]) for _, row in final_results_df.iterrows()]
 
 # 初始猜测值：平分总车数
@@ -112,15 +112,52 @@ result = minimize(
     method="SLSQP",
 )
 
-# 将优化结果添加到 DataFrame
-final_results_df["Optimized Bikes"] = result.x
+# 对连续解进行取整
+optimized_bikes = np.round(result.x)
+total_bikes = np.sum(optimized_bikes)
 
-# 计算当前机会损失值
+# 如果总数不等于83，则进行修正
+diff = int(total_bikes - 83)
+
+# 简单修正策略：
+# 如果diff > 0，就从数量较多的点中减少一些车；如果diff < 0，就在有空间的点中增加一些车
+if diff != 0:
+    # 为了方便后续处理，将结果和容量信息存储起来
+    capacities = final_results_df["容量"].values
+    if diff > 0:
+        # 需要减少diff辆车
+        # 优先从数量较多的站点减少，但不能减到低于1
+        for _ in range(abs(diff)):
+            # 按当前车数从大到小排序的索引列表
+            sorted_indices = np.argsort(-optimized_bikes)
+            for i in sorted_indices:
+                if optimized_bikes[i] > 1:
+                    optimized_bikes[i] -= 1
+                    break
+    else:
+        # diff < 0，需要增加abs(diff)辆车
+        for _ in range(abs(diff)):
+            # 按当前车数从小到大排序的索引列表，以找到有增长空间的地方
+            sorted_indices = np.argsort(optimized_bikes)
+            for i in sorted_indices:
+                if optimized_bikes[i] < capacities[i]:
+                    optimized_bikes[i] += 1
+                    break
+
+# 再次确认总车数为83
+if np.sum(optimized_bikes) != 83:
+    print("修正后总车数仍未达到83，请检查分配策略。")
+
+final_results_df["Optimized Bikes"] = optimized_bikes
+
 # 计算当前机会损失值，并确保不为负
 final_results_df["Current Opportunity Loss"] = final_results_df.apply(
     lambda row: max(0, row["a"] * row["Optimized Bikes"]**2 + row["b"] * row["Optimized Bikes"] + row["c"]),
     axis=1,
 )
+# 对当前所有损失求和
+total_loss = final_results_df["Current Opportunity Loss"].sum()
+print("Total Current Opportunity Loss:", total_loss)
 
 # 输出最终结果表格
 print(final_results_df)
