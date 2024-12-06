@@ -75,5 +75,35 @@ fit_results_df.reset_index(inplace=True)
 r2_df = pd.DataFrame(r2_values, columns=["PortID", "R2"])
 final_results_df = pd.merge(fit_results_df, r2_df, on="PortID")
 
-# 输出拟合结果和 R² 值
+# 添加计算最优空车数量的函数
+# 添加计算最优空车数量的函数
+def calculate_optimal_bikes(row):
+    x_min = 0  # 假设 Available bikes 的最小值
+    x_max = 83  # 假设 Available bikes 的最大值（需要根据实际数据调整）
+
+    # 计算顶点
+    x_vertex = -row["b"] / (2 * row["a"])
+
+    # 如果开口向上，顶点是最小值
+    if row["a"] > 0:
+        return x_vertex
+
+    # 如果开口向下，比较区间边界和顶点值的最小值
+    else:
+        f_x_min = row["a"] * x_min**2 + row["b"] * x_min + row["c"]
+        f_x_max = row["a"] * x_max**2 + row["b"] * x_max + row["c"]
+        f_x_vertex = row["a"] * x_vertex**2 + row["b"] * x_vertex + row["c"]
+
+        # 检查顶点是否在区间内
+        if x_min <= x_vertex <= x_max:
+            return x_vertex if f_x_vertex <= min(f_x_min, f_x_max) else (x_min if f_x_min < f_x_max else x_max)
+        else:
+            return x_min if f_x_min < f_x_max else x_max
+
+# 计算最优空车数量并添加到结果 DataFrame
+final_results_df["Optimal Bikes"] = final_results_df.apply(calculate_optimal_bikes, axis=1)
+# 输出最终表格
 print(final_results_df)
+
+# 保存为 CSV 文件（可选）
+final_results_df.to_csv("Final_Results_With_Optimal_Bikes.csv", index=False)
