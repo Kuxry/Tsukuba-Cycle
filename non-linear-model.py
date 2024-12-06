@@ -98,7 +98,7 @@ constraints = [
 ]
 
 # 定义变量边界：每个站点车数范围 [0, 容量]
-bounds = [(0, row["容量"]) for _, row in final_results_df.iterrows()]
+bounds = [(1, row["容量"]) for _, row in final_results_df.iterrows()]
 
 # 初始猜测值：平分总车数
 initial_guess = [83 / len(final_results_df)] * len(final_results_df)
