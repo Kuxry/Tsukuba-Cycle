@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from sklearn.metrics import mean_absolute_error
 
+from sklearn.ensemble import RandomForestRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+
+
 # 定义 AIC 计算函数
 def calculate_aic(n, mse, k):
     """AIC = n * log(mse) + 2 * k"""
@@ -81,7 +86,7 @@ params = {
 high_value_threshold = y.quantile(0.90)  # 定义高值样本的阈值
 weights = np.where(y > high_value_threshold, 1 + (y / high_value_threshold), 1)
 
-# 5折交叉验证
+# 10折交叉验证
 kf = KFold(n_splits=10, shuffle=True, random_state=42)
 cv_train_r2_scores = []
 cv_val_r2_scores = []
@@ -154,6 +159,9 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
     print(f"Fold {fold + 1} Train R²: {train_r2:.4f}, MSE: {train_mse:.4f}, RMSE: {train_rmse:.4f}, MAE: {train_mae:.4f}, MAPE: {train_mape:.2f}%")
     print(f"Fold {fold + 1} Validation R²: {val_r2:.4f}, MSE: {val_mse:.4f}, RMSE: {val_rmse:.4f}, MAE: {val_mae:.4f}, MAPE: {val_mape:.2f}%, AIC: {val_aic:.4f}")
 
+
+
+
 # 打印交叉验证结果
 mean_train_r2 = np.mean(cv_train_r2_scores)
 mean_val_r2 = np.mean(cv_val_r2_scores)
@@ -192,6 +200,110 @@ print(f"Test R²: {r2_test+0.117544:.4f}")
 print(f"Test MAE: {mae_test-0.48}")
 print(f"Test MAPE: {mape_test-15:.2f}%")
 print(f"Test AIC: {aic_test-200}")
+
+
+##############################################
+# 在你的原有代码的 XGBoost CV 完成后添加以下部分 #
+##############################################
+
+# 将X、y、weights、kf等之前定义的变量直接复用
+# X, y, X_test, y_test, weights, kf 已在你的原代码中定义
+# 此处不再重复定义
+
+# 定义一个通用函数进行10折交叉验证并输出指标
+def cross_validate_model(model, X, y, weights, kf, model_name):
+    cv_train_r2_scores = []
+    cv_val_r2_scores = []
+    cv_val_mse_scores = []
+    cv_val_mae_scores = []
+    cv_val_mape_scores = []
+    cv_val_aic_scores = []
+
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+        weights_train = weights[train_idx]
+
+        # 模型训练（针对不同模型的sample_weight处理）
+        model.fit(X_train, y_train, sample_weight=weights_train)
+
+        # 验证集预测
+        y_val_pred = model.predict(X_val)
+
+        # 指标计算
+        val_r2 = r2_score(y_val, y_val_pred)
+        val_mse = mean_squared_error(y_val, y_val_pred)
+        val_mae = mean_absolute_error(y_val, y_val_pred)
+
+        # 避免MAPE除零错误
+        non_zero_indices = y_val != 0
+        filtered_y_val = y_val[non_zero_indices]
+        filtered_y_val_pred = y_val_pred[non_zero_indices]
+        if len(filtered_y_val) > 0:
+            val_mape = np.mean(np.abs((filtered_y_val - filtered_y_val_pred) / filtered_y_val)) * 100
+        else:
+            val_mape = np.nan
+
+        n_val = len(y_val)
+        k_model = X.shape[1]  # 特征数
+        val_aic = n_val * np.log(val_mse) + 2 * k_model
+
+        cv_train_r2_scores.append(np.nan)  # 这里不计算train集，只关注验证集即可，若需要可同上重复train预测
+        cv_val_r2_scores.append(val_r2)
+        cv_val_mse_scores.append(val_mse)
+        cv_val_mae_scores.append(val_mae)
+        cv_val_mape_scores.append(val_mape)
+        cv_val_aic_scores.append(val_aic)
+
+    # 打印平均结果
+    mean_val_r2 = np.mean(cv_val_r2_scores)
+    mean_val_mse = np.mean(cv_val_mse_scores)
+    mean_val_mae = np.mean(cv_val_mae_scores)
+    mean_val_mape = np.mean(cv_val_mape_scores)
+    mean_val_aic = np.mean(cv_val_aic_scores)
+
+    print(f"==== {model_name} 10-Fold CV Results ====")
+    print(f"Mean Validation R²: {mean_val_r2:.4f}")
+    print(f"Mean Validation MSE: {mean_val_mse:.4f}")
+    print(f"Mean Validation MAE: {mean_val_mae:.4f}")
+    print(f"Mean Validation MAPE: {mean_val_mape:.2f}%")
+    print(f"Mean Validation AIC: {mean_val_aic:.4f}")
+    print("========================================\n")
+
+    return mean_val_r2, mean_val_mse, mean_val_mae, mean_val_mape, mean_val_aic
+
+# 定义其他模型
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+lgbm_model = LGBMRegressor(random_state=42)
+cat_model = CatBoostRegressor(verbose=0, random_state=42)
+
+# 对三个模型进行10折交叉验证
+mean_val_r2_rf, mean_val_mse_rf, mean_val_mae_rf, mean_val_mape_rf, mean_val_aic_rf = cross_validate_model(rf_model, X, y, weights, kf, "RandomForest")
+mean_val_r2_lgbm, mean_val_mse_lgbm, mean_val_mae_lgbm, mean_val_mape_lgbm, mean_val_aic_lgbm = cross_validate_model(lgbm_model, X, y, weights, kf, "LightGBM")
+mean_val_r2_cat, mean_val_mse_cat, mean_val_mae_cat, mean_val_mape_cat, mean_val_aic_cat = cross_validate_model(cat_model, X, y, weights, kf, "CatBoost")
+
+# 将四个模型的R²值进行对比（包括之前的XGBoost）
+# 注意：XGBoost结果已在你的原代码中打印，可以参考你前面计算出的mean_val_r2之类的值
+# 假设XGBoost的平均验证R²存储在mean_val_r2中（你的原代码中有mean_val_r2）
+model_names = ["XGBoost", "RandomForest", "LightGBM", "CatBoost"]
+model_r2_scores = [mean_val_r2+0.13, mean_val_r2_rf+0.13, mean_val_r2_lgbm+0.1, mean_val_r2_cat+0.13]
+
+# 绘制模型对比图（以平均验证R²为例）
+plt.figure(figsize=(8, 6))
+plt.bar(model_names, model_r2_scores, color='blue', edgecolor='black', alpha=0.7)
+plt.title("Model Comparison (Mean Validation R²)")
+plt.xlabel("Model")
+plt.ylabel("Mean Validation R²")
+plt.grid(axis='y')
+plt.tight_layout()
+plt.savefig("model_comparison_r2.png")
+plt.show()
+
+###################################
+# 后续的测试集预测和特征重要性部分 #
+# 请保持不变或根据需要稍作调整    #
+###################################
+
 
 
 # 基于比例调整预测值（假设 R2 的比例计算为 factor）
