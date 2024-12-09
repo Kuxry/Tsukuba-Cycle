@@ -5,6 +5,8 @@ from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+from sklearn.metrics import r2_score
+
 
 # Step 1: 加载数据
 train_file = 'train.xlsx'  # 替换为你的训练集文件路径
@@ -17,6 +19,10 @@ test_df = pd.read_excel(test_file)
 # 确保按时间排序（假设时间列名为 '利用開始'）
 train_df['利用開始日'] = pd.to_datetime(train_df['利用開始日'])
 test_df['利用開始日'] = pd.to_datetime(test_df['利用開始日'])
+
+# 删除 PortID 列
+train_df = train_df.drop(columns=['PortID','利用ステーション'], errors='ignore')
+test_df = test_df.drop(columns=['PortID','利用ステーション'], errors='ignore')
 
 train_df = train_df.sort_values(by='利用開始日')
 test_df = test_df.sort_values(by='利用開始日')
@@ -45,14 +51,15 @@ X_test, y_test = create_sequences(test_scaled, time_steps)
 
 # Step 3: 构建 LSTM 模型
 model = Sequential([
-    LSTM(64, activation='relu', input_shape=(time_steps, 1)),
+    LSTM(128, activation='relu', return_sequences=True, input_shape=(time_steps, 1)),
+    LSTM(64, activation='relu'),
     Dense(1)
 ])
 
 model.compile(optimizer='adam', loss='mse')
 
 # Step 4: 训练模型
-model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1)
+model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1)
 
 # Step 5: 测试集预测
 predictions = model.predict(X_test)
@@ -64,7 +71,8 @@ y_test_rescaled = scaler.inverse_transform(y_test)
 # Step 6: 计算误差
 mse = mean_squared_error(y_test_rescaled, predictions_rescaled)
 print(f"测试集的均方误差 (MSE): {mse:.4f}")
-
+r2 = r2_score(y_test_rescaled, predictions_rescaled)
+print(f"测试集的 R² 分数: {r2:.4f}")
 # Step 7: 可视化结果
 plt.figure(figsize=(12, 6))
 plt.plot(y_test_rescaled, label='实际值', color='blue')
