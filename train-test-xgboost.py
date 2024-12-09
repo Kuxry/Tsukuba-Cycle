@@ -235,21 +235,26 @@ plt.tight_layout()
 plt.savefig('distribution_real_vs_predicted.png')
 plt.show()
 
-# 特征重要性排序
+# 特征重要性排序，去掉指定特征
 feature_importances = cv_models[-1].get_score(importance_type='weight')
-sorted_importances = sorted(feature_importances.items(), key=lambda x: x[1], reverse=True)
+
+# 排除指定的两个特征
+excluded_features = ['PortID_平均利用回数', 'PortID_利用の分散']
+filtered_importances = {k: v for k, v in feature_importances.items() if k not in excluded_features}
+
+# 排序
+sorted_importances = sorted(filtered_importances.items(), key=lambda x: x[1], reverse=True)
 feature_names = [item[0] for item in sorted_importances]
 importance_values = [item[1] for item in sorted_importances]
-
 
 # 绘制特征重要性条形图
 plt.figure(figsize=(12, 8))
 plt.barh(feature_names[::-1], importance_values[::-1], color='blue', edgecolor='black')
-plt.title("Feature Importance")
+plt.title("Feature Importance (Excluded Specific Features)")
 plt.xlabel("Importance Score")
 plt.ylabel("Features")
 plt.tight_layout()
-plt.savefig('feature_importance.png')
+plt.savefig('feature_importance_filtered.png')
 plt.show()
 
 
