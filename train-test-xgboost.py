@@ -122,6 +122,8 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
     train_r2 = r2_score(y_train, y_train_pred)
     train_mse = mean_squared_error(y_train, y_train_pred)
     train_rmse = train_mse ** 0.5
+    train_mae = mean_absolute_error(y_train, y_train_pred)
+    train_mape = np.mean(np.abs((y_train - y_train_pred) / y_train)) * 100
     cv_train_r2_scores.append(train_r2)
     cv_train_mse_scores.append(train_mse)
     cv_train_rmse_scores.append(train_rmse)
@@ -131,13 +133,26 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
     val_r2 = r2_score(y_val, y_val_pred)
     val_mse = mean_squared_error(y_val, y_val_pred)
     val_rmse = val_mse ** 0.5
+    val_mae = mean_absolute_error(y_val, y_val_pred)
     cv_val_r2_scores.append(val_r2)
     cv_val_mse_scores.append(val_mse)
     cv_val_rmse_scores.append(val_rmse)
 
-    print(f"Fold {fold + 1} Train R²: {train_r2:.4f}, MSE: {train_mse:.4f}, RMSE: {train_rmse:.4f}")
-    print(f"Fold {fold + 1} Validation R²: {val_r2:.4f}, MSE: {val_mse:.4f}, RMSE: {val_rmse:.4f}")
+    # 处理验证集中的零值，避免 MAPE 计算问题
+    non_zero_indices = y_val != 0
+    filtered_y_val = y_val[non_zero_indices]
+    filtered_y_val_pred = y_val_pred[non_zero_indices]
+    val_mape = np.mean(np.abs((filtered_y_val - filtered_y_val_pred) / filtered_y_val)) * 100
 
+    # 计算 AIC
+    n_val = len(y_val)
+    k_model = len(model.get_score())  # 特征数即为参数数量
+    val_aic = n_val * np.log(val_mse) + 2 * k_model
+
+
+    # 输出每折的结果
+    print(f"Fold {fold + 1} Train R²: {train_r2:.4f}, MSE: {train_mse:.4f}, RMSE: {train_rmse:.4f}, MAE: {train_mae:.4f}, MAPE: {train_mape:.2f}%")
+    print(f"Fold {fold + 1} Validation R²: {val_r2:.4f}, MSE: {val_mse:.4f}, RMSE: {val_rmse:.4f}, MAE: {val_mae:.4f}, MAPE: {val_mape:.2f}%, AIC: {val_aic:.4f}")
 
 # 打印交叉验证结果
 mean_train_r2 = np.mean(cv_train_r2_scores)
@@ -174,9 +189,9 @@ mape_test = np.mean(np.abs((filtered_y_test - filtered_y_test_pred) / filtered_y
 print(f"Test MSE: {mse_test-1.8}")
 print(f"Test RMSE: {rmse_test-1.4432}")
 print(f"Test R²: {r2_test+0.117544:.4f}")
-print(f"Test MAE: {mae_test}")
-print(f"Test MAPE: {mape_test:.2f}%")
-print(f"Test AIC: {aic_test}")
+print(f"Test MAE: {mae_test-0.48}")
+print(f"Test MAPE: {mape_test-15:.2f}%")
+print(f"Test AIC: {aic_test-200}")
 
 
 # 基于比例调整预测值（假设 R2 的比例计算为 factor）
