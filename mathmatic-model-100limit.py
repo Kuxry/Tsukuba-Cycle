@@ -92,16 +92,16 @@ def global_objective(bike_distribution):
         total_loss += a * bikes**2 + b * bikes + c
     return total_loss
 
-# 添加约束：每个站点分配的车数不能超过容量，且总车数为 83
+# 添加约束：每个站点分配的车数不能超过容量，且总车数为 100
 constraints = [
-    {"type": "eq", "fun": lambda x: np.sum(x) - 83},  # 总车数必须为 83
+    {"type": "eq", "fun": lambda x: np.sum(x) - 100},  # 总车数必须为 100
 ]
 
 # 定义变量边界：每个站点车数范围 [1, 容量] （假设下界为1）
 bounds = [(1, row["容量"]) for _, row in final_results_df.iterrows()]
 
 # 初始猜测值：平分总车数
-initial_guess = [83 / len(final_results_df)] * len(final_results_df)
+initial_guess = [100 / len(final_results_df)] * len(final_results_df)
 
 # 执行优化
 result = minimize(
@@ -116,8 +116,8 @@ result = minimize(
 optimized_bikes = np.round(result.x)
 total_bikes = np.sum(optimized_bikes)
 
-# 如果总数不等于83，则进行修正
-diff = int(total_bikes - 83)
+# 如果总数不等于100，则进行修正
+diff = int(total_bikes - 100)
 
 # 简单修正策略：
 # 如果diff > 0，就从数量较多的点中减少一些车；如果diff < 0，就在有空间的点中增加一些车
@@ -144,9 +144,9 @@ if diff != 0:
                     optimized_bikes[i] += 1
                     break
 
-# 再次确认总车数为83
-if np.sum(optimized_bikes) != 83:
-    print("修正后总车数仍未达到83，请检查分配策略。")
+# 再次确认总车数为100
+if np.sum(optimized_bikes) != 100:
+    print("修正后总车数仍未达到100，请检查分配策略。")
 
 final_results_df["Optimized Bikes"] = optimized_bikes
 
