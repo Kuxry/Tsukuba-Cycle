@@ -24,9 +24,9 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 4. **Human Flow Data**: Additional variables, such as human flow within a 500-meter mesh, were included by ZHENG to enrich the explanatory power of the model.
 
-5. **Reanalysis with XGBoost**: Li-san reanalyzed the dataset using XGBoost, improving the prediction accuracy by better capturing nonlinear relationships between the explanatory variables.
+5. **Reanalysis with XGBoost**: Li reanalyzed the dataset using XGBoost, improving the prediction accuracy by better capturing nonlinear relationships between the explanatory variables.
 
-6. **Transformer Model Construction**: Li-san also worked on building a Transformer-based model as one of the candidate models to further improve the predictive power.
+6. **Transformer Model Construction**: Li also worked on building a Transformer-based model as one of the candidate models to further improve the predictive power.
 
 #### Data Processing and Application
 
@@ -42,7 +42,7 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 3. **Vehicle Data Processing**: ZHENG contributed by analyzing the availability of bicycles at different times, focusing on empty-port scenarios and understanding the factors behind them.
 
-4. **Potential Demand Analysis**: Li-san prepared to analyze latent demand, with daily potential demand data being processed. ZHENG visualized the current empty port situations, making it easier to interpret usage trends.
+4. **Potential Demand Analysis**: Li prepared to analyze latent demand, with daily potential demand data being processed. ZHENG visualized the current empty port situations, making it easier to interpret usage trends.
 
 #### Output and Scenarios
 
