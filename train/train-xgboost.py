@@ -10,7 +10,7 @@ from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from matplotlib import font_manager
 
 # 手动加载 MS Gothic 字体
-font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_path = "../MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 # 自定义 MAPE 计算函数
@@ -64,7 +64,7 @@ numeric_cols.extend(new_numeric_cols)
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
 
 # 保存 scaler 和 LabelEncoder 对象
-joblib.dump(scaler, 'scaler.joblib')
+joblib.dump(scaler, '../scaler.joblib')
 joblib.dump(label_encoder_type, 'label_encoder_type.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
 

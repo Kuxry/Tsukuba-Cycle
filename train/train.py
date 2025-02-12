@@ -35,7 +35,7 @@ numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以�
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
 
 # 保存 scaler 和 LabelEncoder 对象，供以后预测时使用
-joblib.dump(scaler, 'scaler.joblib')
+joblib.dump(scaler, '../scaler.joblib')
 joblib.dump(label_encoder, 'label_encoder.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
 

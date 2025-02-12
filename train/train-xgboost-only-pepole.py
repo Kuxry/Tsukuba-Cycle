@@ -11,7 +11,7 @@ import logging
 from matplotlib import font_manager
 
 # 手动加载 MS Gothic 字体
-font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_path = "../MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 # 配置日志
@@ -43,7 +43,7 @@ def preprocess_data(data_path):
     scaler = StandardScaler()
     data[selected_features] = scaler.fit_transform(data[selected_features])
 
-    joblib.dump(scaler, 'scaler.joblib')
+    joblib.dump(scaler, '../scaler.joblib')
 
     X = data[selected_features]
     y = data['利用回数']
@@ -130,7 +130,7 @@ def train_final_model(X, y, best_params):
 
 # 调用主要流程
 if __name__ == "__main__":
-    X, y = preprocess_data('data4.xlsx')
+    X, y = preprocess_data('../data4.xlsx')
 
     # 进行 5 折交叉验证
     fold_results = cross_validate_model(X, y, num_folds=5)

@@ -9,8 +9,8 @@ from sklearn.metrics import r2_score
 
 
 # Step 1: 加载数据
-train_file = 'train.xlsx'  # 替换为你的训练集文件路径
-test_file = 'test.xlsx'    # 替换为你的测试集文件路径
+train_file = '../train.xlsx'  # 替换为你的训练集文件路径
+test_file = '../test.xlsx'  # 替换为你的测试集文件路径
 
 train_df = pd.read_excel(train_file)
 test_df = pd.read_excel(test_file)

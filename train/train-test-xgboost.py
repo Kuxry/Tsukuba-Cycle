@@ -11,7 +11,7 @@ import shap
 from matplotlib import font_manager
 
 # 手动加载 MS Gothic 字体
-font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_path = "../MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 # 定义 AIC 计算函数
@@ -21,7 +21,7 @@ def calculate_aic(n, mse, k):
     return aic
 
 # 手动加载 MS Gothic 字体
-font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_path = "../MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 

@@ -41,7 +41,7 @@ scaler = StandardScaler()
 numeric_cols = ['バスとの距離', '駅との距離', '人口_総数_300m以内', '男性割合', '15_64人口割合', '就業者_通学者割合',
                 '就業者_通学者利用交通手段_自転車割合']
 data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
-joblib.dump(scaler, 'scaler.joblib')
+joblib.dump(scaler, '../scaler.joblib')
 joblib.dump(label_encoder, 'label_encoder.joblib')
 joblib.dump(label_encoder_day_type, 'label_encoder_day_type.joblib')
 X = data[['バスとの距離', '駅との距離', '立地タイプ', '曜日', '人口_総数_300m以内', '男性割合', '15_64人口割合',
