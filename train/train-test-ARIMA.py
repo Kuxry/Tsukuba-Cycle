@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Step 1: 加载数据
-train_file = '../train.xlsx'  # 训练集文件
-test_file = '../test.xlsx'  # 测试集文件
+train_file = '../data/train.xlsx'  # 训练集文件
+test_file = '../data/test.xlsx'  # 测试集文件
 
 # 加载数据
 train_df = pd.read_excel(train_file)

@@ -130,7 +130,7 @@ def train_final_model(X, y, best_params):
 
 # 调用主要流程
 if __name__ == "__main__":
-    X, y = preprocess_data('../data4.xlsx')
+    X, y = preprocess_data('../data/data4.xlsx')
 
     # 进行 5 折交叉验证
     fold_results = cross_validate_model(X, y, num_folds=5)

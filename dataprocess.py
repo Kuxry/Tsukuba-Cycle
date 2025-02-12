@@ -19,7 +19,7 @@ day_mapping = {
 }
 
 # Step 1: 加载数据
-file_path = 'train.xlsx'  # 替换为你的文件路径
+file_path = 'data/train.xlsx'  # 替换为你的文件路径
 data = pd.ExcelFile(file_path)
 df = data.parse('Sheet1')  # 假设数据在第一个工作表中
 
