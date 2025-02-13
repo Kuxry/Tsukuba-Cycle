@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # 读取 CSV 文件 (损失和可用自行车数据)
-file_path = 'Minlost.csv'  # 请确保文件路径正确
+file_path = '../Minlost.csv'  # 请确保文件路径正确
 df = pd.read_csv(file_path)
 
 # 读取容量数据
-capacity_file_path = 'ポートの容量.csv'  # 容量文件路径
+capacity_file_path = '../ポートの容量.csv'  # 容量文件路径
 port_capacity_df = pd.read_csv(capacity_file_path)
 
 # 按站点 (PortID) 分组

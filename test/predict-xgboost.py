@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
 # 手动加载 MS Gothic 字体
-font_path = "MS Gothic.ttf"  # 确保路径是正确的
+font_path = "../MS Gothic.ttf"  # 确保路径是正确的
 font_manager.fontManager.addfont(font_path)
 plt.rcParams['font.family'] = 'MS Gothic'
 
 # Step 1: 加载保存好的模型和预处理对象
 loaded_model = joblib.load('final_tuned_xgb_model_third_trial.joblib')  # 加载最终微调后的模型
-scaler = joblib.load('scaler.joblib')  # 加载保存的 scaler
+scaler = joblib.load('../scaler.joblib')  # 加载保存的 scaler
 label_encoder_type = joblib.load('label_encoder_type.joblib')
 label_encoder_day_type = joblib.load('label_encoder_day_type.joblib')
 

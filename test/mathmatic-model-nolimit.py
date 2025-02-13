@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
 # 读取 CSV 文件 (损失和可用自行车数据)
-file_path = 'Minlost.csv'  # 请确保文件路径正确
+file_path = '../Minlost.csv'  # 请确保文件路径正确
 df = pd.read_csv(file_path)
 
 # 读取容量数据
-capacity_file_path = 'ポートの容量.csv'  # 容量文件路径
+capacity_file_path = '../ポートの容量.csv'  # 容量文件路径
 port_capacity_df = pd.read_csv(capacity_file_path)
 
 # 按站点 (PortID) 分组
@@ -92,61 +92,26 @@ def global_objective(bike_distribution):
         total_loss += a * bikes**2 + b * bikes + c
     return total_loss
 
-# 添加约束：每个站点分配的车数不能超过容量，且总车数为 200
-constraints = [
-    {"type": "eq", "fun": lambda x: np.sum(x) - 200},  # 总车数必须为 200
-]
+
 
 # 定义变量边界：每个站点车数范围 [1, 容量] （假设下界为1）
 bounds = [(1, row["容量"]) for _, row in final_results_df.iterrows()]
 
 # 初始猜测值：平分总车数
-initial_guess = [200 / len(final_results_df)] * len(final_results_df)
+initial_guess = [83 / len(final_results_df)] * len(final_results_df)
 
 # 执行优化
 result = minimize(
     global_objective,
     initial_guess,
     bounds=bounds,
-    constraints=constraints,
+
     method="SLSQP",
 )
 
 # 对连续解进行取整
 optimized_bikes = np.round(result.x)
 total_bikes = np.sum(optimized_bikes)
-
-# 如果总数不等于200，则进行修正
-diff = int(total_bikes - 200)
-
-# 简单修正策略：
-# 如果diff > 0，就从数量较多的点中减少一些车；如果diff < 0，就在有空间的点中增加一些车
-if diff != 0:
-    # 为了方便后续处理，将结果和容量信息存储起来
-    capacities = final_results_df["容量"].values
-    if diff > 0:
-        # 需要减少diff辆车
-        # 优先从数量较多的站点减少，但不能减到低于1
-        for _ in range(abs(diff)):
-            # 按当前车数从大到小排序的索引列表
-            sorted_indices = np.argsort(-optimized_bikes)
-            for i in sorted_indices:
-                if optimized_bikes[i] > 1:
-                    optimized_bikes[i] -= 1
-                    break
-    else:
-        # diff < 0，需要增加abs(diff)辆车
-        for _ in range(abs(diff)):
-            # 按当前车数从小到大排序的索引列表，以找到有增长空间的地方
-            sorted_indices = np.argsort(optimized_bikes)
-            for i in sorted_indices:
-                if optimized_bikes[i] < capacities[i]:
-                    optimized_bikes[i] += 1
-                    break
-
-# 再次确认总车数为200
-if np.sum(optimized_bikes) != 200:
-    print("修正后总车数仍未达到200，请检查分配策略。")
 
 final_results_df["Optimized Bikes"] = optimized_bikes
 

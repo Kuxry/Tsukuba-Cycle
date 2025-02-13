@@ -8,7 +8,7 @@ from math import radians, sin, cos, sqrt, atan2
 
 # Step 1: 加载保存好的模型和预处理对象
 loaded_model = joblib.load('best_xgb_model.joblib')  # 加载模型
-scaler = joblib.load('scaler.joblib')  # 加载保存的 scaler
+scaler = joblib.load('../scaler.joblib')  # 加载保存的 scaler
 label_encoder = joblib.load('label_encoder.joblib')  # 加载保存的 タイプ 编码器
 label_encoder_day_type = joblib.load('label_encoder_day_type.joblib')  # 加载保存的 day_type 编码器
 
