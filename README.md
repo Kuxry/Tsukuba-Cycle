@@ -4,11 +4,39 @@
 
 
 
-## Overview
+# Overview of the Problem and Key Points
+![slides](./image/image1.jpg)
 
-This project, part of the MDA program at the University of Tsukuba in collaboration with the Tsukuba City Government, aims to predict user demand and determine optimal locations for setting up share-cycle stations across the city of Tsukuba. By leveraging AI technologies and machine learning models, the project seeks to solve real-world problems related to urban mobility and share-cycle infrastructure planning.
+The presentation focuses on optimizing the port placement and vehicle management for the **Tsuku-Chari** shared bicycle system in **Tsukuba City**, aiming to improve revenue structure and eliminate deficits.
 
-The goal is to use advanced prediction models to place share-cycle stations in locations that maximize accessibility and meet user needs. This project also addresses the challenge of vehicle redistribution by analyzing data on bicycle availability, demand, and usage patterns.
+## Identified Problem
+![slides](./image/image2.jpg)
+![slides](./image/image3.jpg)
+![slides](./image/image4.jpg)
+- The **Tsuku-Chari** shared bicycle project is currently operating under a deficit.
+- The financial reports from fiscal years **2021 to 2024** indicate consistent losses, with an annual deficit of approximately **763,095 yen (~2,000 yen/day)**.
+- The **goal** of the study is to eliminate this deficit through **cost-efficient operational improvements**.
+
+## Current Financial Situation
+- The main expenses come from **contract fees**, including system management and bicycle redistribution.
+- Despite increasing revenues, **the project remains in deficit**, mainly due to:
+  - High costs of **bicycle reallocation**.
+  - **Port relocation and installation expenses**.
+  - Costs associated with **adding new bicycles**.
+- The project plans a **full-scale operation starting from October 2024**, with **an expansion of ports and bicycles**, requiring sustainable financial strategies.
+
+## Proposed Solutions
+### 1. Optimal Port Placement  
+- Instead of adding new ports, the strategy suggests **relocating existing ports** at **zero cost** whenever possible.
+- Minimize installation costs by using **low-cost or existing infrastructure**.
+
+### 2. Efficient Bicycle Redistribution  
+- Reduce operational expenses by **minimizing unnecessary bicycle movements**.
+- Optimize the **frequency of redistribution** to lower costs while maintaining usability.
+
+### **Key Focus:**
+- **Zero-cost measures**, such as **port relocations and optimized bicycle reallocation**, are prioritized to **reduce operational expenses** and eliminate financial losses.
+- The study aims to find a **balance between service availability and cost efficiency**.
 
 ## Key Contributions
 
@@ -24,9 +52,9 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 4. **Human Flow Data**: Additional variables, such as human flow within a 500-meter mesh, were included by ZHENG to enrich the explanatory power of the model.
 
-5. **Reanalysis with XGBoost**: Li-san reanalyzed the dataset using XGBoost, improving the prediction accuracy by better capturing nonlinear relationships between the explanatory variables.
+5. **Reanalysis with XGBoost**: Li reanalyzed the dataset using XGBoost, improving the prediction accuracy by better capturing nonlinear relationships between the explanatory variables.
 
-6. **Transformer Model Construction**: Li-san also worked on building a Transformer-based model as one of the candidate models to further improve the predictive power.
+6. **Transformer Model Construction**: Li also worked on building a Transformer-based model as one of the candidate models to further improve the predictive power.
 
 #### Data Processing and Application
 
@@ -42,7 +70,7 @@ The goal is to use advanced prediction models to place share-cycle stations in l
 
 3. **Vehicle Data Processing**: ZHENG contributed by analyzing the availability of bicycles at different times, focusing on empty-port scenarios and understanding the factors behind them.
 
-4. **Potential Demand Analysis**: Li-san prepared to analyze latent demand, with daily potential demand data being processed. ZHENG visualized the current empty port situations, making it easier to interpret usage trends.
+4. **Potential Demand Analysis**: Li prepared to analyze latent demand, with daily potential demand data being processed. ZHENG visualized the current empty port situations, making it easier to interpret usage trends.
 
 #### Output and Scenarios
 
