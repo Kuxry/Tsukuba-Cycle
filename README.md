@@ -91,4 +91,4 @@ To support this initiative, automated data scraping is used to collect real-time
 This project exemplifies the application of AI in real-world settings, where data-driven solutions directly contribute to enhancing public transportation systems and creating smarter, more efficient urban environments. The success of these technologies in Tsukuba's share-cycle program highlights the potential for similar approaches to revolutionize mobility in other cities.
 
 
-Add the second research
+
